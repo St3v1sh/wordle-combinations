@@ -28,6 +28,17 @@ body {
     height: 100%;
 }
 
+button {
+    padding: 0;
+    background-color: var(--light);
+    color: var(--lightest);
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
 #app {
     position: relative;
     display: flex;
@@ -56,6 +67,7 @@ h1 {
 }
 
 hr {
+    box-sizing: border-box;
     border-color: var(--light);
     width: 100%;
 }
@@ -111,17 +123,6 @@ button.present {
     justify-content: space-between;
     align-items: center;
     height: 100%;
-}
-
-button {
-    padding: 0;
-    background-color: var(--light);
-    color: var(--lightest);
-    font-size: 1rem;
-    font-weight: bold;
-    border: none;
-    border-radius: 0.25rem;
-    cursor: pointer;
 }
 
 #calculate {
@@ -261,6 +262,24 @@ pre::-webkit-scrollbar-thumb {
 
 pre::-webkit-scrollbar-thumb:hover {
     background-color: rgba(255, 255, 255, 0.4);
+}
+
+.pulse {
+    animation: pulse 0.1s ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 @media screen and (max-width: 480px) {
