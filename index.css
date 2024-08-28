@@ -102,6 +102,10 @@ button.key {
     background-color: var(--lighter);
 }
 
+button.none {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
 button.wrong {
     background-color: var(--light);
     border: none;
@@ -265,7 +269,7 @@ pre::-webkit-scrollbar-thumb:hover {
 }
 
 .pulse {
-    animation: pulse 0.1s ease-in-out;
+    animation: pulse 0.15s ease-in-out;
 }
 
 @keyframes pulse {
@@ -274,7 +278,7 @@ pre::-webkit-scrollbar-thumb:hover {
     }
 
     50% {
-        transform: scale(1.1);
+        transform: scale(1.2);
     }
 
     100% {
