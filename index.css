@@ -194,6 +194,10 @@ button.present {
     z-index: 1;
 }
 
+.show-modal {
+    display: flex;
+}
+
 .modal-content {
     display: flex;
     flex-direction: column;
@@ -218,7 +222,7 @@ button.present {
     padding: 0 1rem;
 }
 
-#close-btn {
+#modal-close-btn {
     padding: 0.5rem;
     width: 8rem;
     text-align: end;
@@ -268,10 +272,6 @@ pre::-webkit-scrollbar-thumb:hover {
     background-color: rgba(255, 255, 255, 0.4);
 }
 
-.pulse {
-    animation: pulse 0.15s ease-in-out;
-}
-
 @keyframes pulse {
     0% {
         transform: scale(1);
@@ -284,6 +284,42 @@ pre::-webkit-scrollbar-thumb:hover {
     100% {
         transform: scale(1);
     }
+}
+
+.pulse {
+    animation: pulse 0.15s ease-in-out;
+}
+
+@keyframes slide-in {
+    0% {
+        transform: translateY(-100%);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.flip {
+    animation: flip 0.33s ease-in-out;
+}
+
+@keyframes flip {
+    0% {
+        transform: scaleY(100%);
+    }
+
+    50% {
+        transform: scaleY(0);
+    }
+
+    100% {
+        transform: scaleY(100%);
+    }
+}
+
+.slide-in {
+    animation: slide-in 0.25s ease-in-out;
 }
 
 @media screen and (max-width: 480px) {

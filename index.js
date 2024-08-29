@@ -20,6 +20,8 @@ const letterStates = letters.map(_ => LetterState.NONE);
 
 const keys = document.getElementsByClassName('key');
 const calculateButton = document.getElementById('calculate');
+const modal = document.getElementById('calculation-modal');
+const modalCloseButton = document.getElementById('modal-close-btn');
 
 let input = [];
 
@@ -27,8 +29,12 @@ for (let index = 0; index < tiles.length; index++) {
     const tile = tiles[index];
 
     // Add animations to the tiles.
-    tile.addEventListener('animationend', function () {
-        tile.classList.remove('pulse');
+    tile.addEventListener('animationend', function (event) {
+        if (event.animationName === 'pulse') {
+            tile.classList.remove('pulse');
+        } else if (event.animationName === 'flip') {
+            tile.classList.remove('flip');
+        }
     });
 
     // Add click functionality to the tiles.
@@ -128,8 +134,10 @@ function cycleState(tileIndex) {
         const tile = tiles[index];
         if (input[index] === letter) {
             tile.classList.remove('none');
+            tile.classList.remove('pulse');
             tile.classList.remove(state.toString());
             tile.classList.add(newState.toString());
+            tile.classList.add('flip');
         }
     }
 
@@ -141,4 +149,36 @@ function cycleState(tileIndex) {
     }
 }
 
-// document.getElementById('list').textContent = `test`;
+function calculate() {
+    // Check for invalid inputs.
+    const numberOfPresentLetters = letterStates.reduce((count, state) => {
+        if (state === LetterState.RIGHT || state === LetterState.PRESENT) {
+            return count + 1;
+        }
+    }, 0);
+    if (numberOfPresentLetters > 5) {
+        document.getElementById('list').textContent = `cannot calculate: too many letters`;
+        return;
+    }
+
+    const available = letters.filter((_, index) => letterStates[index] !== LetterState.WRONG);
+}
+
+function calculateRec(partial, available) {
+
+}
+
+// Add calculation modal functionality.
+calculateButton.addEventListener('click', function () {
+    if (!modal.classList.contains('show-modal')) {
+        modal.classList.add('show-modal');
+        modal.classList.add('slide-in');
+    }
+});
+
+modalCloseButton.addEventListener('click', function () {
+    if (modal.classList.contains('show-modal')) {
+        modal.classList.remove('show-modal');
+        modal.classList.remove('slide-in');
+    }
+});
