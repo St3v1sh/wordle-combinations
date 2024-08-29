@@ -14,6 +14,8 @@ class LetterState {
     }
 }
 
+const WORD_LENGTH = 5;
+
 const tiles = document.getElementsByClassName('tile');
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
 const letterStates = letters.map(_ => LetterState.NONE);
@@ -72,11 +74,17 @@ document.addEventListener('keydown', function (event) {
         addLetter(key);
     } else if (key === 'backspace') {
         removeLastLetter();
-    } else if (key === 'enter' || key === 'space') {
+    } else if (key === 'enter') {
         const focusedElementIsTile = Array.prototype.some.call(tiles, tile => tile === document.activeElement);
         const focusedElementIsLastInput = document.activeElement === tiles[input.length - 1];
         if (!focusedElementIsTile || focusedElementIsLastInput) {
             cycleState(input.length - 1);
+        }
+    } else if (key === ' ') {
+        if (modal.classList.contains('show-modal')) {
+            hideModal();
+        } else {
+            showModal();
         }
     }
 });
@@ -150,16 +158,29 @@ function cycleState(tileIndex) {
 }
 
 function calculate() {
-    // Check for invalid inputs.
+    // Check for invalid number of inputs.
     const numberOfPresentLetters = letterStates.reduce((count, state) => {
         if (state === LetterState.RIGHT || state === LetterState.PRESENT) {
             return count + 1;
         }
     }, 0);
-    if (numberOfPresentLetters > 5) {
+    if (numberOfPresentLetters > WORD_LENGTH) {
         document.getElementById('list').textContent = `cannot calculate: too many letters`;
         return;
     }
+
+    // Check if there are multiple right letters in the same column but they're different.
+    const effectiveWordLength = Math.ceil(input.length/WORD_LENGTH);
+    const inputWithStates = input.map(letter => [letter, letterStates[letters.indexOf(letter)]]);
+    const transposedStates = inputWithStates.map((_, index) => inputWithStates[(index*WORD_LENGTH + Math.floor(index/effectiveWordLength)) % inputWithStates.length]);
+    const transposedStatesSliced = Array.from({ length: WORD_LENGTH }, (_, index) => transposedStates.slice(index*effectiveWordLength, (index+1)*effectiveWordLength));
+    const filtered = transposedStatesSliced.map(row => row.filter(([_, state]) => state === LetterState.RIGHT).map(([letter]) => letter));
+
+    const hasRepeatRight = input.length <= WORD_LENGTH ? false : filtered.some(row => (new Set(row)).size !== row.length);
+    console.log(transposedStates);
+    console.log(transposedStatesSliced);
+    console.log(filtered);
+    console.log(hasRepeatRight);
 
     const available = letters.filter((_, index) => letterStates[index] !== LetterState.WRONG);
 }
@@ -168,17 +189,21 @@ function calculateRec(partial, available) {
 
 }
 
-// Add calculation modal functionality.
-calculateButton.addEventListener('click', function () {
+function showModal() {
     if (!modal.classList.contains('show-modal')) {
+        calculate();
         modal.classList.add('show-modal');
         modal.classList.add('slide-in');
     }
-});
+}
 
-modalCloseButton.addEventListener('click', function () {
+function hideModal() {
     if (modal.classList.contains('show-modal')) {
         modal.classList.remove('show-modal');
         modal.classList.remove('slide-in');
     }
-});
+}
+
+// Add calculation modal functionality.
+calculateButton.addEventListener('click', showModal);
+modalCloseButton.addEventListener('click', hideModal);
