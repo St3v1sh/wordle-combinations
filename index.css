@@ -257,6 +257,7 @@ pre {
     padding: 0 0.5rem;
     margin: 0;
     overflow-y: scroll;
+    text-wrap: wrap;
 }
 
 pre::-webkit-scrollbar {

@@ -165,28 +165,40 @@ function calculate() {
         }
     }, 0);
     if (numberOfPresentLetters > WORD_LENGTH) {
-        document.getElementById('list').textContent = `cannot calculate: too many letters`;
+        document.getElementById('list').textContent = `cannot calculate: too many letters present`;
         return;
     }
 
     // Check if there are multiple right letters in the same column but they're different.
-    const effectiveWordLength = Math.ceil(input.length/WORD_LENGTH);
-    const inputWithStates = input.map(letter => [letter, letterStates[letters.indexOf(letter)]]);
-    const transposedStates = inputWithStates.map((_, index) => inputWithStates[(index*WORD_LENGTH + Math.floor(index/effectiveWordLength)) % inputWithStates.length]);
-    const transposedStatesSliced = Array.from({ length: WORD_LENGTH }, (_, index) => transposedStates.slice(index*effectiveWordLength, (index+1)*effectiveWordLength));
+    const effTransposeWordLength = Math.ceil(input.length/WORD_LENGTH);
+    const paddingLength = (WORD_LENGTH - (input.length%WORD_LENGTH)) % WORD_LENGTH;
+
+    const inputWithStates = input.map(letter => [letter, letterStates[letters.indexOf(letter)]]).concat(Array(paddingLength).fill(['', LetterState.NONE]));
+    const transposedStates = inputWithStates.map((_, index) => inputWithStates[(index*WORD_LENGTH + Math.floor(index/effTransposeWordLength)) % inputWithStates.length]);
+    const transposedStatesSliced = Array.from({ length: WORD_LENGTH }, (_, index) => transposedStates.slice(index*effTransposeWordLength, (index+1)*effTransposeWordLength));
     const filtered = transposedStatesSliced.map(row => row.filter(([_, state]) => state === LetterState.RIGHT).map(([letter]) => letter));
 
-    const hasRepeatRight = input.length <= WORD_LENGTH ? false : filtered.some(row => (new Set(row)).size !== row.length);
-    console.log(transposedStates);
-    console.log(transposedStatesSliced);
-    console.log(filtered);
-    console.log(hasRepeatRight);
+    const hasUniqueRights = input.length <= WORD_LENGTH ? true : filtered.every(row => (new Set(row)).size <= 1);
+    if (!hasUniqueRights) {
+        document.getElementById('list').textContent = `cannot calculate: multiple right letters in the same column`;
+        return;
+    }
 
-    const available = letters.filter((_, index) => letterStates[index] !== LetterState.WRONG);
+    // Find all combinations of letters.
+    const availableLetters = letters.filter((_, index) => letterStates[index] !== LetterState.WRONG);
+    const combinations = calculateRec([], [], availableLetters);
+    console.log
 }
 
 function calculateRec(partial, available) {
-
+    for (let letter of available) {
+        const newPartial = [...partial, letter];
+        // if (newPartial.length === WORD_LENGTH) {
+        //     return newPartial.join('');
+        // } else {
+        //     return calculateRec(words, newPartial, available);
+        // }
+    }
 }
 
 function showModal() {
