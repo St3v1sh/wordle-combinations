@@ -14,7 +14,9 @@ class LetterState {
     }
 }
 
+let calculationLimit = 20000;
 const WORD_LENGTH = 5;
+const DEFAULT_LIST_MESSAGE = 'calculating...';
 
 const tiles = document.getElementsByClassName('tile');
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
@@ -24,6 +26,7 @@ const keys = document.getElementsByClassName('key');
 const calculateButton = document.getElementById('calculate');
 const modal = document.getElementById('calculation-modal');
 const modalCloseButton = document.getElementById('modal-close-btn');
+const outputList = document.getElementById('list');
 
 let input = [];
 
@@ -76,11 +79,14 @@ document.addEventListener('keydown', function (event) {
         removeLastLetter();
     } else if (key === 'enter') {
         const focusedElementIsTile = Array.prototype.some.call(tiles, tile => tile === document.activeElement);
+        const focusedElementIsCalculateButton = document.activeElement === calculateButton;
         const focusedElementIsLastInput = document.activeElement === tiles[input.length - 1];
-        if (!focusedElementIsTile || focusedElementIsLastInput) {
+        if (!focusedElementIsCalculateButton && (!focusedElementIsTile || focusedElementIsLastInput)) {
             cycleState(input.length - 1);
         }
     } else if (key === ' ') {
+        event.preventDefault();
+
         if (modal.classList.contains('show-modal')) {
             hideModal();
         } else {
@@ -159,53 +165,74 @@ function cycleState(tileIndex) {
 
 function calculate() {
     // Check for invalid number of inputs.
-    const numberOfPresentLetters = letterStates.reduce((count, state) => {
-        if (state === LetterState.RIGHT || state === LetterState.PRESENT) {
-            return count + 1;
-        }
-    }, 0);
+    const numberOfPresentLetters = letterStates.reduce((count, state) => count + (state === LetterState.RIGHT || state === LetterState.PRESENT ? 1 : 0), 0);
     if (numberOfPresentLetters > WORD_LENGTH) {
-        document.getElementById('list').textContent = `cannot calculate: too many letters present`;
+        outputList.textContent = `cannot calculate: too many letters present`;
         return;
     }
 
     // Check if there are multiple right letters in the same column but they're different.
-    const effTransposeWordLength = Math.ceil(input.length/WORD_LENGTH);
-    const paddingLength = (WORD_LENGTH - (input.length%WORD_LENGTH)) % WORD_LENGTH;
+    const effTransposeWordLength = Math.ceil(input.length / WORD_LENGTH);
+    const paddingLength = (WORD_LENGTH - (input.length % WORD_LENGTH)) % WORD_LENGTH;
 
     const inputWithStates = input.map(letter => [letter, letterStates[letters.indexOf(letter)]]).concat(Array(paddingLength).fill(['', LetterState.NONE]));
-    const transposedStates = inputWithStates.map((_, index) => inputWithStates[(index*WORD_LENGTH + Math.floor(index/effTransposeWordLength)) % inputWithStates.length]);
-    const transposedStatesSliced = Array.from({ length: WORD_LENGTH }, (_, index) => transposedStates.slice(index*effTransposeWordLength, (index+1)*effTransposeWordLength));
+    const transposedStates = inputWithStates.map((_, index) => inputWithStates[(index * WORD_LENGTH + Math.floor(index / effTransposeWordLength)) % inputWithStates.length]);
+    const transposedStatesSliced = Array.from({ length: WORD_LENGTH }, (_, index) => transposedStates.slice(index * effTransposeWordLength, (index + 1) * effTransposeWordLength));
     const filtered = transposedStatesSliced.map(row => row.filter(([_, state]) => state === LetterState.RIGHT).map(([letter]) => letter));
+    const setsOfRightLetters = filtered.map(row => new Set(row));
 
-    const hasUniqueRights = input.length <= WORD_LENGTH ? true : filtered.every(row => (new Set(row)).size <= 1);
-    if (!hasUniqueRights) {
-        document.getElementById('list').textContent = `cannot calculate: multiple right letters in the same column`;
+    const hasUniqueRightLetters = input.length <= WORD_LENGTH ? true : setsOfRightLetters.every(column => column.size <= 1);
+    if (!hasUniqueRightLetters) {
+        outputList.textContent = `cannot calculate: multiple right letters in the same column`;
         return;
     }
 
     // Find all combinations of letters.
+    let combinations = [];
     const availableLetters = letters.filter((_, index) => letterStates[index] !== LetterState.WRONG);
-    const combinations = calculateRec([], [], availableLetters);
-    console.log
+    const rightLettersByIndex = setsOfRightLetters.map(column => column.values().next().value);
+    const presentLetters = letters.filter((_, index) => letterStates[index] === LetterState.PRESENT || letterStates[index] === LetterState.RIGHT);
+    calculateRec([], availableLetters, rightLettersByIndex, presentLetters, combinations);
+
+    // Limit the number of combinations.
+    if (combinations.length > calculationLimit) {
+        combinations = combinations.slice(0, calculationLimit);
+        combinations[calculationLimit] = '(too many combinations)';
+    }
+    outputList.textContent = combinations.join('\n');
 }
 
-function calculateRec(partial, available) {
-    for (let letter of available) {
+function calculateRec(partial, available, rightLettersByIndex, presentLetters, combinations) {
+    if (combinations.length > calculationLimit) {
+        return;
+    }
+
+    // Use present letters when possible.
+    const nextLetters = rightLettersByIndex[partial.length] || available;
+    for (let letter of nextLetters) {
         const newPartial = [...partial, letter];
-        // if (newPartial.length === WORD_LENGTH) {
-        //     return newPartial.join('');
-        // } else {
-        //     return calculateRec(words, newPartial, available);
-        // }
+        // Check that all present letters are in the word.
+        if (newPartial.length === WORD_LENGTH && presentLetters.every(letter => newPartial.includes(letter))) {
+            combinations.push(newPartial.join(''));
+        } else if (newPartial.length < WORD_LENGTH) {
+            calculateRec(newPartial, available, rightLettersByIndex, presentLetters, combinations);
+        }
+
+        if (combinations.length > calculationLimit) {
+            return;
+        }
     }
 }
 
 function showModal() {
     if (!modal.classList.contains('show-modal')) {
-        calculate();
+        outputList.textContent = DEFAULT_LIST_MESSAGE;
         modal.classList.add('show-modal');
         modal.classList.add('slide-in');
+
+        requestIdleCallback(() => {
+            calculate();
+        });
     }
 }
 
