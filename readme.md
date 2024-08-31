@@ -2,6 +2,8 @@
 
 This application helps calculate what possibilities are left given which letters are right, present, or wrong.
 
+[Pages link](https://st3v1sh.github.io/wordle-combinations/)
+
 ## Controls
 
 * Type on the keyboard `[A-Z]` or click on the on-screen keyboard to write letters.
