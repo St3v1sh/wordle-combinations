@@ -14,7 +14,7 @@ class LetterState {
     }
 }
 
-let calculationLimit = 20000;
+var calculationLimit = 20000;
 const WORD_LENGTH = 5;
 const DEFAULT_LIST_MESSAGE = 'calculating...';
 
