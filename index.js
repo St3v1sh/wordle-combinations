@@ -1,9 +1,22 @@
-// States to keep track of letter colors.
-class LetterState {
-    static NONE = new LetterState('none');
-    static WRONG = new LetterState('wrong');
-    static RIGHT = new LetterState('right');
-    static PRESENT = new LetterState('present');
+var calculationLimit = 20000;
+const WORD_LENGTH = 5;
+const NUMBER_OF_CLUE_ROWS = 5;
+const DEFAULT_LIST_MESSAGE = 'calculating...';
+const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('');
+
+const tiles = document.getElementsByClassName('tile');
+const keys = document.getElementsByClassName('key');
+const calculateButton = document.getElementById('calculate');
+const modal = document.getElementById('calculation-modal');
+const modalCloseButton = document.getElementById('modal-close-btn');
+const outputList = document.getElementById('list');
+
+// States to keep track of tile colors.
+class TileState {
+    static NONE = new TileState('none');
+    static WRONG = new TileState('wrong');
+    static RIGHT = new TileState('right');
+    static PRESENT = new TileState('present');
 
     constructor(state) {
         this.state = state;
@@ -14,20 +27,27 @@ class LetterState {
     }
 }
 
-var calculationLimit = 20000;
-const WORD_LENGTH = 5;
-const DEFAULT_LIST_MESSAGE = 'calculating...';
+// Each letter of the right word has rules about what it can or can't be.
+class LetterRules {
+    constructor(rightLetter) {
+        if (rightLetter) {
+            this.rightLetter = rightLetter;
+        } else {
+            this.wrongLetters = new Set();
+        }
+    }
 
-const tiles = document.getElementsByClassName('tile');
-const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
-const letterStates = letters.map(_ => LetterState.NONE);
+    // Returns the present letters with the wrong letters removed.
+    getPossibleLetters() {
+        if (this.rightLetter) {
+            return new Set([this.rightLetter]);
+        } else {
+            return new Set([...LETTERS].filter(letter => !this.wrongLetters.has(letter)));
+        }
+    }
+}
 
-const keys = document.getElementsByClassName('key');
-const calculateButton = document.getElementById('calculate');
-const modal = document.getElementById('calculation-modal');
-const modalCloseButton = document.getElementById('modal-close-btn');
-const outputList = document.getElementById('list');
-
+const tileStates = Array(tiles.length).fill(TileState.NONE);
 let input = [];
 
 for (let index = 0; index < tiles.length; index++) {
@@ -54,7 +74,7 @@ for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
     const keyValue = key.value.toLowerCase();
 
-    if (letters.includes(keyValue)) {
+    if (LETTERS.includes(keyValue)) {
         key.addEventListener('click', function () {
             addLetter(key.value);
         })
@@ -73,7 +93,7 @@ for (let index = 0; index < keys.length; index++) {
 document.addEventListener('keydown', function (event) {
     const key = event.key.toLowerCase();
 
-    if (letters.includes(key) && !event.ctrlKey) {
+    if (LETTERS.includes(key) && !event.ctrlKey) {
         addLetter(key);
     } else if (key === 'backspace') {
         removeLastLetter();
@@ -102,11 +122,9 @@ function addLetter(letter) {
     input.push(letter);
 
     const index = input.length - 1;
-    const state = letterStates[letters.indexOf(letter)];
-
     tiles[index].textContent = letter;
     tiles[index].classList.add('pulse');
-    tiles[index].classList.add(state.toString());
+    tiles[index].classList.add(tileStates[index].toString());
 }
 
 function removeLastLetter() {
@@ -115,10 +133,11 @@ function removeLastLetter() {
     }
 
     const index = input.length - 1;
-    const state = letterStates[letters.indexOf(input[index])];
+    const state = tileStates[index];
 
     tiles[index].textContent = '';
     tiles[index].classList.remove(state.toString());
+    tileStates[index] = TileState.NONE;
     input.pop();
 }
 
@@ -127,72 +146,121 @@ function cycleState(tileIndex) {
         return;
     }
 
+    const state = tileStates[tileIndex];
     const letter = input[tileIndex];
-    const letterIndex = letters.indexOf(letter);
-    const state = letterStates[letterIndex];
 
     let newState;
-    if (state === LetterState.NONE) {
-        newState = LetterState.WRONG;
-    } else if (state === LetterState.WRONG) {
-        newState = LetterState.PRESENT;
-    } else if (state === LetterState.PRESENT) {
-        newState = LetterState.RIGHT;
-    } else if (state === LetterState.RIGHT) {
-        newState = LetterState.WRONG;
+    if (state === TileState.NONE) {
+        newState = TileState.WRONG;
+    } else if (state === TileState.WRONG) {
+        newState = TileState.PRESENT;
+    } else if (state === TileState.PRESENT) {
+        newState = TileState.RIGHT;
+    } else if (state === TileState.RIGHT) {
+        newState = TileState.WRONG;
     }
-    letterStates[letterIndex] = newState;
+    tileStates[tileIndex] = newState;
 
-    // Update all tiles with the same letter.
-    for (let index = 0; index < tiles.length; index++) {
-        const tile = tiles[index];
-        if (input[index] === letter) {
-            tile.classList.remove('none');
-            tile.classList.remove('pulse');
-            tile.classList.remove(state.toString());
-            tile.classList.add(newState.toString());
-            tile.classList.add('flip');
-        }
-    }
+    const tile = tiles[tileIndex];
+    tile.classList.remove('none');
+    tile.classList.remove('pulse');
+    tile.classList.remove(state.toString());
+    tile.classList.add(newState.toString());
+    tile.classList.add('flip');
 
     // Update the keyboard.
-    const key = Array.prototype.find.call(keys, key => key.value === letter);
-    if (key) {
-        key.classList.remove(state.toString());
-        key.classList.add(newState.toString());
-    }
+    // const key = Array.prototype.find.call(keys, key => key.value === letter);
+    // if (key) {
+    //     key.classList.remove(state.toString());
+    //     key.classList.add(newState.toString());
+    // }
 }
 
 function calculate() {
-    // Check for invalid number of inputs.
-    const numberOfPresentLetters = letterStates.reduce((count, state) => count + (state === LetterState.RIGHT || state === LetterState.PRESENT ? 1 : 0), 0);
+    // Check for invalid number of present letters.
+    const words = Array.from({ length: Math.ceil(input.length / WORD_LENGTH) }, (_, index) => input.slice(index * WORD_LENGTH, (index + 1) * WORD_LENGTH));
+    const wordsFilteredPresentLetters = words.map((word, wordIndex) =>
+        word.filter((_, letterIndex) => {
+            const state = tileStates[wordIndex * WORD_LENGTH + letterIndex];
+            return state === TileState.RIGHT || state === TileState.PRESENT;
+        })
+    );
+    const letterCounter = LETTERS.map(letter =>
+        Math.max(...wordsFilteredPresentLetters.map(word =>
+            word.filter(presentLetter => presentLetter === letter).length
+        ))
+    );
+    const numberOfPresentLetters = letterCounter.reduce((sum, count) => sum + count, 0);
     if (numberOfPresentLetters > WORD_LENGTH) {
-        outputList.textContent = `cannot calculate: too many letters present`;
+        outputList.textContent = `error: too many letters present`;
         return;
     }
 
-    // Check if there are multiple right letters in the same column but they're different.
-    const effTransposeWordLength = Math.ceil(input.length / WORD_LENGTH);
+    // Check letters in the same column.
+    const columnLength = Math.ceil(input.length / WORD_LENGTH);
     const paddingLength = (WORD_LENGTH - (input.length % WORD_LENGTH)) % WORD_LENGTH;
 
-    const inputWithStates = input.map(letter => [letter, letterStates[letters.indexOf(letter)]]).concat(Array(paddingLength).fill(['', LetterState.NONE]));
-    const transposedStates = inputWithStates.map((_, index) => inputWithStates[(index * WORD_LENGTH + Math.floor(index / effTransposeWordLength)) % inputWithStates.length]);
-    const transposedStatesSliced = Array.from({ length: WORD_LENGTH }, (_, index) => transposedStates.slice(index * effTransposeWordLength, (index + 1) * effTransposeWordLength));
-    const filtered = transposedStatesSliced.map(row => row.filter(([_, state]) => state === LetterState.RIGHT).map(([letter]) => letter));
-    const setsOfRightLetters = filtered.map(row => new Set(row));
+    const inputWithStates = input.map((letter, index) => [letter, tileStates[index]]).concat(Array(paddingLength).fill(['', TileState.NONE]));
+    const transposedStates = inputWithStates.map((_, index) => inputWithStates[(index * WORD_LENGTH + Math.floor(index / columnLength)) % inputWithStates.length]);
+    const transposedStatesSliced = Array.from({ length: WORD_LENGTH }, (_, index) => transposedStates.slice(index * columnLength, (index + 1) * columnLength));
 
-    const hasUniqueRightLetters = input.length <= WORD_LENGTH ? true : setsOfRightLetters.every(column => column.size <= 1);
-    if (!hasUniqueRightLetters) {
-        outputList.textContent = `cannot calculate: multiple right letters in the same column`;
+    const filteredRightLetterColumns = transposedStatesSliced.map(row => row.filter(([_, state]) => state === TileState.RIGHT).map(([letter]) => letter));
+    const setsOfRightLetterColumns = filteredRightLetterColumns.map(row => new Set(row));
+    const hasUniqueRightLettersInColumns = input.length <= WORD_LENGTH ? true : setsOfRightLetterColumns.every(column => column.size <= 1);
+    if (!hasUniqueRightLettersInColumns) {
+        outputList.textContent = `error: multiple right letters in the same column`;
         return;
+    }
+
+    // Check for letter contradictions.
+    for (let column of transposedStatesSliced) {
+        const rightLetters = new Set();
+        const wrongLetters = new Set();
+
+        for (let [letter, state] of column) {
+            if (state === TileState.RIGHT) {
+                rightLetters.add(letter);
+            } else if (state === TileState.WRONG) {
+                wrongLetters.add(letter);
+            }
+        }
+
+        if ([...rightLetters].some(letter => wrongLetters.has(letter))) {
+            outputList.textContent = `error: a letter cannot be both right and wrong in the same column`;
+            return;
+        }
+    }
+
+    // Set up LetterRules.
+    const letterRules = Array.from({ length: NUMBER_OF_CLUE_ROWS }, (_, index) => new LetterRules(setsOfRightLetterColumns[index].values().next().value));
+
+    // Find globally wrong letters.
+    const globalWrongLetters = new Set(
+        input.filter((letter, index) =>
+            tileStates[index] === TileState.WRONG &&
+            !tileStates.some((state, tileIndex) =>
+                input[tileIndex] === letter && state === TileState.PRESENT
+            )
+        )
+    );
+
+    // Add in locally wrong letters.
+    for (let index = 0; index < letterRules.length; index++) {
+        const letterRule = letterRules[index];
+        let wrongLetters = new Set([...globalWrongLetters]);
+        for (let states of transposedStatesSliced[index]) {
+            if (states[1] === TileState.WRONG || states[1] === TileState.PRESENT) {
+                wrongLetters.add(states[0]);
+            }
+        }
+
+        letterRule.wrongLetters = wrongLetters;
     }
 
     // Find all combinations of letters.
     let combinations = [];
-    const availableLetters = letters.filter((_, index) => letterStates[index] !== LetterState.WRONG);
-    const rightLettersByIndex = setsOfRightLetters.map(column => column.values().next().value);
-    const presentLetters = letters.filter((_, index) => letterStates[index] === LetterState.PRESENT || letterStates[index] === LetterState.RIGHT);
-    calculateRec([], availableLetters, rightLettersByIndex, presentLetters, combinations);
+    const presentLetters = new Set(input.filter((_, index) => tileStates[index] === TileState.PRESENT || tileStates[index] === TileState.RIGHT));
+    calculateRec(letterRules, [...presentLetters], letterCounter, [], combinations);
 
     // Limit the number of combinations.
     if (combinations.length > calculationLimit) {
@@ -202,20 +270,31 @@ function calculate() {
     outputList.textContent = combinations.join('\n');
 }
 
-function calculateRec(partial, available, rightLettersByIndex, presentLetters, combinations) {
+/**
+ * @param {LetterRules[]} letterRules
+ * @param {string[]} presentLetters
+ * @param {number[]} letterCounter
+ * @param {string[]} partial
+ * @param {string[]} combinations
+ */
+function calculateRec(letterRules, presentLetters, letterCounter, partial, combinations) {
     if (combinations.length > calculationLimit) {
         return;
     }
 
-    // Use present letters when possible.
-    const nextLetters = rightLettersByIndex[partial.length] || available;
+    const nextLetters = letterRules[partial.length].getPossibleLetters();
     for (let letter of nextLetters) {
         const newPartial = [...partial, letter];
-        // Check that all present letters are in the word.
-        if (newPartial.length === WORD_LENGTH && presentLetters.every(letter => newPartial.includes(letter))) {
-            combinations.push(newPartial.join(''));
-        } else if (newPartial.length < WORD_LENGTH) {
-            calculateRec(newPartial, available, rightLettersByIndex, presentLetters, combinations);
+        if (newPartial.length === WORD_LENGTH) {
+            // Check if the combination is valid.
+            if (!presentLetters.some(presentLetter =>
+                letterCounter[LETTERS.indexOf(presentLetter)] > 0 &&
+                letterCounter[LETTERS.indexOf(presentLetter)] !== newPartial.filter(letter => letter === presentLetter).length
+            )) {
+                combinations.push(newPartial.join(''));
+            }
+        } else {
+            calculateRec(letterRules, presentLetters, letterCounter, newPartial, combinations);
         }
 
         if (combinations.length > calculationLimit) {
