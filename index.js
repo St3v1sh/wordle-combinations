@@ -1,6 +1,5 @@
 var calculationLimit = 20000;
 const WORD_LENGTH = 5;
-const NUMBER_OF_CLUE_ROWS = 5;
 const DEFAULT_LIST_MESSAGE = 'calculating...';
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
@@ -17,9 +16,18 @@ class TileState {
     static WRONG = new TileState('wrong');
     static RIGHT = new TileState('right');
     static PRESENT = new TileState('present');
+    static PRIORITY_LIST = [TileState.NONE, TileState.WRONG, TileState.PRESENT, TileState.RIGHT];
+
+    static getStateFromPriority(priority) {
+        return TileState.PRIORITY_LIST[priority];
+    }
 
     constructor(state) {
         this.state = state;
+    }
+
+    getPriority() {
+        return TileState.PRIORITY_LIST.findIndex(state => state.toString() === this.state);
     }
 
     toString() {
@@ -138,7 +146,10 @@ function removeLastLetter() {
     tiles[index].textContent = '';
     tiles[index].classList.remove(state.toString());
     tileStates[index] = TileState.NONE;
-    input.pop();
+    const letter = input.pop();
+
+    // Update the keyboard.
+    UpdateKeyboard(letter);
 }
 
 function cycleState(tileIndex) {
@@ -169,11 +180,18 @@ function cycleState(tileIndex) {
     tile.classList.add('flip');
 
     // Update the keyboard.
-    // const key = Array.prototype.find.call(keys, key => key.value === letter);
-    // if (key) {
-    //     key.classList.remove(state.toString());
-    //     key.classList.add(newState.toString());
-    // }
+    UpdateKeyboard(letter);
+}
+
+function UpdateKeyboard(letter) {
+    const key = [...keys].find(key => key.value === letter);
+    const highestPriority = Math.max(0, ...tileStates.filter((_, index) => input[index] === letter).map(state => state.getPriority()));
+    if (key) {
+        TileState.PRIORITY_LIST.forEach(state => key.classList.remove(state.toString()));
+        if (highestPriority > 0) {
+            key.classList.add(TileState.getStateFromPriority(highestPriority).toString());
+        }
+    }
 }
 
 function calculate() {
@@ -232,7 +250,7 @@ function calculate() {
     }
 
     // Set up LetterRules.
-    const letterRules = Array.from({ length: NUMBER_OF_CLUE_ROWS }, (_, index) => new LetterRules(setsOfRightLetterColumns[index].values().next().value));
+    const letterRules = Array.from({ length: WORD_LENGTH }, (_, index) => new LetterRules(setsOfRightLetterColumns[index].values().next().value));
 
     // Find globally wrong letters.
     const globalWrongLetters = new Set(
@@ -244,7 +262,7 @@ function calculate() {
         )
     );
 
-    // Add in locally wrong letters.
+    // Add locally wrong letters to each LetterRules.
     for (let index = 0; index < letterRules.length; index++) {
         const letterRule = letterRules[index];
         let wrongLetters = new Set([...globalWrongLetters]);
@@ -261,6 +279,12 @@ function calculate() {
     let combinations = [];
     const presentLetters = new Set(input.filter((_, index) => tileStates[index] === TileState.PRESENT || tileStates[index] === TileState.RIGHT));
     calculateRec(letterRules, [...presentLetters], letterCounter, [], combinations);
+
+    // Show a message if there are no combinations.
+    if (combinations.length === 0) {
+        outputList.textContent = 'no possible combinations';
+        return;
+    }
 
     // Limit the number of combinations.
     if (combinations.length > calculationLimit) {
@@ -289,7 +313,7 @@ function calculateRec(letterRules, presentLetters, letterCounter, partial, combi
             // Check if the combination is valid.
             if (!presentLetters.some(presentLetter =>
                 letterCounter[LETTERS.indexOf(presentLetter)] > 0 &&
-                letterCounter[LETTERS.indexOf(presentLetter)] !== newPartial.filter(letter => letter === presentLetter).length
+                letterCounter[LETTERS.indexOf(presentLetter)] > newPartial.filter(letter => letter === presentLetter).length
             )) {
                 combinations.push(newPartial.join(''));
             }

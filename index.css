@@ -75,16 +75,16 @@ hr {
 main {
     display: flex;
     justify-content: center;
-    margin: 3rem 0;
+    margin: 2rem 0;
 }
 
 #board {
     display: grid;
-    gap: 4px;
-    grid-template-rows: repeat(5, 1fr);
+    gap: 5px;
+    grid-template-rows: repeat(6, 1fr);
     grid-template-columns: repeat(5, 1fr);
-    width: calc(17.5rem + 16px);
-    height: calc(17.5rem + 16px);
+    width: calc(17.5rem + 20px);
+    height: calc(21rem + 25px);
 }
 
 button.tile {
@@ -332,17 +332,17 @@ pre::-webkit-scrollbar-thumb:hover {
         font-size: 1.3rem;
     }
 
+    main {
+        margin: 1rem 0;
+    }
+
     #board {
-        width: calc(15rem + 16px);
-        height: calc(15rem + 16px);
+        width: calc(15rem + 20px);
+        height: calc(18rem + 25px);
     }
 
     button.tile {
         font-size: 1.7rem;
-    }
-
-    .calculate {
-        height: 2rem;
     }
 
     #keyboard {
@@ -370,10 +370,18 @@ pre::-webkit-scrollbar-thumb:hover {
     }
 
     main {
-        margin: 1rem 0;
+        margin: 0.5rem 0;
+    }
+
+    #calculate {
+        height: 2.5rem;
     }
 
     #keyboard-container {
         justify-content: flex-start;
+    }
+
+    #keyboard {
+        margin: 0.5rem 0;
     }
 }
