@@ -209,6 +209,7 @@ button.present {
     padding: 1rem 2rem;
     background-color: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(3px);
+    overflow: hidden;
 }
 
 .modal-header {
