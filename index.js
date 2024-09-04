@@ -10,6 +10,9 @@ const modal = document.getElementById('calculation-modal');
 const modalCloseButton = document.getElementById('modal-close-btn');
 const outputList = document.getElementById('list');
 
+/** @type {HTMLInputElement} */
+const cheatButton = document.getElementById('cheat');
+
 // States to keep track of tile colors.
 class TileState {
     static NONE = new TileState('none');
@@ -120,6 +123,15 @@ document.addEventListener('keydown', function (event) {
         } else {
             showModal();
         }
+    }
+});
+
+cheatButton.addEventListener('click', function () {
+    if (modal.classList.contains('show-modal')) {
+        outputList.textContent = DEFAULT_LIST_MESSAGE;
+        requestIdleCallback(() => {
+            calculate();
+        });
     }
 });
 
@@ -238,7 +250,7 @@ function calculate() {
         for (let [letter, state] of column) {
             if (state === TileState.RIGHT) {
                 rightLetters.add(letter);
-            } else if (state === TileState.WRONG) {
+            } else if (state === TileState.WRONG || state === TileState.PRESENT) {
                 wrongLetters.add(letter);
             }
         }
@@ -315,7 +327,9 @@ function calculateRec(letterRules, presentLetters, letterCounter, partial, combi
                 letterCounter[LETTERS.indexOf(presentLetter)] > 0 &&
                 letterCounter[LETTERS.indexOf(presentLetter)] > newPartial.filter(letter => letter === presentLetter).length
             )) {
-                combinations.push(newPartial.join(''));
+                if (!cheatButton.checked || SOLUTION_LIST.has(newPartial.join(''))) {
+                    combinations.push(newPartial.join(''));
+                }
             }
         } else {
             calculateRec(letterRules, presentLetters, letterCounter, newPartial, combinations);
