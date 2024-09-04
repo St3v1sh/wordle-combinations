@@ -401,10 +401,6 @@ pre::-webkit-scrollbar-thumb:hover {
         height: 2.5rem;
     }
 
-    #keyboard-container {
-        justify-content: flex-start;
-    }
-
     #keyboard {
         margin: 0.5rem 0;
     }
